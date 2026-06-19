@@ -3,129 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scam Guard AI</title>
+    <title>Scam Detect</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col items-center justify-center p-4">
 
-    <div class="bg-slate-800 p-8 rounded-2xl shadow-2xl max-w-lg w-full border border-slate-700">
-        <h1 class="text-3xl font-extrabold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 text-center">
-            Scam Guard AI
+    <div class="bg-slate-800 p-8 rounded-2xl shadow-2xl max-w-xl w-full border-2 border-slate-700">
+        <h1 class="text-4xl font-black mb-3 text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500 text-center tracking-tight">
+            Scam Detect
         </h1>
-        <p class="text-slate-400 text-center text-sm mb-6">
-            Upload a screenshot of any email, text, or DM to check if it's a scam.
+        <p class="text-slate-300 text-center text-lg mb-8 font-medium">
+            Not sure if a text message or email is real? Let us check it for you.
         </p>
-        
-        <div class="mb-5">
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Gemini API Key</label>
-            <input type="password" id="apiKeyInput" placeholder="Paste your Gemini API key here" 
-                   class="w-full px-4 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-200 focus:outline-none focus:border-cyan-500 text-sm" />
-            <p class="text-[11px] text-slate-500 mt-1">Get a free key from Google AI Studio. It stays safely in your browser.</p>
+
+        <div class="bg-slate-900/50 p-4 rounded-xl mb-6 border border-slate-700/50 text-sm text-slate-400">
+            <p class="font-bold text-slate-200 mb-1">How to use this:</p>
+            <ol class="list-decimal list-inside space-y-1">
+                <li>Take a screenshot or photo of the suspicious message.</li>
+                <li>Click the button below to upload that photo.</li>
+                <li>Press the big orange "Scan Message Now" button.</li>
+            </ol>
         </div>
 
-        <div class="mb-5">
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Upload Screenshot</label>
+        <div class="mb-6">
+            <label class="block text-sm font-bold uppercase tracking-wider text-slate-300 mb-2">1. Choose your photo:</label>
             <input type="file" id="imageInput" accept="image/*" 
-                   class="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-cyan-950 file:text-cyan-400 hover:file:bg-cyan-900 file:cursor-pointer" />
+                   class="block w-full text-base text-slate-300 file:mr-4 file:py-4 file:px-6 file:rounded-xl file:border-0 file:text-base file:font-bold file:bg-orange-950 file:text-orange-400 hover:file:bg-orange-900 file:cursor-pointer border-2 border-dashed border-slate-600 rounded-xl p-2 bg-slate-900/30" />
         </div>
         
-        <button id="analyzeBtn" class="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold py-3 px-6 rounded-xl transition duration-200 shadow-lg shadow-cyan-500/20">
-            Scan for Scams
+        <button id="analyzeBtn" class="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-black text-xl py-4 px-6 rounded-xl transition duration-200 shadow-lg shadow-orange-500/20 tracking-wide uppercase">
+            2. Scan Message Now
         </button>
         
-        <div id="status" class="mt-6 text-center text-sm text-cyan-400 font-medium hidden flex items-center justify-center gap-2">
-            <svg class="animate-spin h-5 w-5 text-cyan-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <div id="status" class="mt-8 text-center text-lg text-orange-400 font-bold hidden flex items-center justify-center gap-3">
+            <svg class="animate-spin h-6 w-6 text-orange-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            <span id="statusText">Reading image...</span>
+            <span id="statusText">Reading the text in your image...</span>
         </div>
         
-        <div id="resultBox" class="mt-6 p-5 rounded-xl hidden border">
-            <h3 id="resultVerdict" class="text-lg font-bold mb-2"></h3>
-            <p id="resultAnalysis" class="text-sm text-slate-300 leading-relaxed"></p>
+        <div id="resultBox" class="mt-8 p-6 rounded-xl hidden border-4 shadow-xl">
+            <h3 id="resultVerdict" class="text-2xl font-black mb-3 tracking-wide uppercase"></h3>
+            <p id="resultAnalysis" class="text-base text-slate-100 font-medium leading-relaxed bg-slate-900/40 p-4 rounded-lg border border-slate-700/50"></p>
         </div>
     </div>
 
     <script>
         document.getElementById('analyzeBtn').addEventListener('click', async () => {
-            const apiKey = document.getElementById('apiKeyInput').value.trim();
             const fileInput = document.getElementById('imageInput');
             const statusDiv = document.getElementById('status');
             const statusText = document.getElementById('statusText');
-            const resultBox = document.getElementById('resultBox');
-            const resultVerdict = document.getElementById('resultVerdict');
-            const resultAnalysis = document.getElementById('resultAnalysis');
-            
-            if (!apiKey) {
-                alert('Please enter your Gemini API key first!');
-                return;
-            }
-            if (fileInput.files.length === 0) {
-                alert('Please upload a screenshot image.');
-                return;
-            }
-
-            // Show loading UI
-            statusDiv.classList.remove('hidden');
-            resultBox.classList.add('hidden');
-            statusText.innerText = "Extracting text from image...";
-
-            const imageFile = fileInput.files[0];
-
-            try {
-                // Step 1: Run OCR on the image
-                const ocrResult = await Tesseract.recognize(imageFile, 'eng');
-                const extractedText = ocrResult.data.text;
-
-                if (!extractedText.trim()) {
-                    throw new Error("Could not read any text from the image. Make sure it's a clear screenshot.");
-                }
-
-                statusText.innerText = "Analyzing text with AI...";
-
-                // Step 2: Set up the AI System Prompt
-                const systemPrompt = "You are an expert cybersecurity analyst. Analyze this text extracted from a user's screenshot (email/message/alert). Determine if it is an Official communication, a Suspicious message, or an outright Scam. Look for urgency, bad links, weird formatting, or phishing tactics. Respond in exactly this JSON format: {\"verdict\": \"Official | Suspicious | Scam\", \"explanation\": \"Your 2-3 sentence analysis here.\"}";
-
-                // Step 3: Call the live Gemini API
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: `${systemPrompt}\n\nUser Text:\n${extractedText}` }] }]
-                    })
-                });
-
-                const data = await response.json();
-                const aiResponseText = data.candidates[0].content.parts[0].text;
-                
-                // Clean JSON formatting if AI wrapped it in markdown code blocks
-                const cleanJson = aiResponseText.replace(/```json|```/g, '').trim();
-                const result = JSON.parse(cleanJson);
-
-                // Step 4: Display the styling based on the verdict
-                resultBox.classList.remove('hidden');
-                resultAnalysis.innerText = result.explanation;
-
-                if (result.verdict.toLowerCase().includes('scam')) {
-                    resultVerdict.innerText = "🔴 HIGH RISK: SCAM DETECTED";
-                    resultBox.className = "mt-6 p-5 rounded-xl border-red-500/30 bg-red-950/20 text-red-400";
-                } else if (result.verdict.toLowerCase().includes('suspicious')) {
-                    resultVerdict.innerText = "🟡 WARNING: SUSPICIOUS ACTIVITY";
-                    resultBox.className = "mt-6 p-5 rounded-xl border-yellow-500/30 bg-yellow-950/20 text-yellow-400";
-                } else {
-                    resultVerdict.innerText = "🟢 VERIFIED: LOOKS OFFICIAL";
-                    resultBox.className = "mt-6 p-5 rounded-xl border-green-500/30 bg-green-950/20 text-green-400";
-                }
-
-            } catch (err) {
-                alert('Something went wrong: ' + err.message);
-                console.error(err);
-            } finally {
-                statusDiv.classList.add('hidden');
-            }
-        });
-    </script>
-</body>
-</html>
+            const resultBox
