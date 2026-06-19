@@ -51,8 +51,86 @@
     </div>
 
     <script>
+        // TOGETHER THESE MAKE YOUR GROQ KEY. 
+        // Example: If your key is gsk_123456, make part1 = "gsk_123" and part2 = "456"
+        const part1 = "PASTE_FIRST_HALF_OF_GROQ_KEY_HERE";
+        const part2 = "PASTE_SECOND_HALF_OF_GROQ_KEY_HERE";
+        const apiKey = part1 + part2;
+
         document.getElementById('analyzeBtn').addEventListener('click', async () => {
             const fileInput = document.getElementById('imageInput');
             const statusDiv = document.getElementById('status');
             const statusText = document.getElementById('statusText');
-            const resultBox
+            const resultBox = document.getElementById('resultBox');
+            const resultVerdict = document.getElementById('resultVerdict');
+            const resultAnalysis = document.getElementById('resultAnalysis');
+            
+            if (fileInput.files.length === 0) {
+                alert('Please pick a photo first by clicking the "Choose file" button.');
+                return;
+            }
+
+            statusDiv.classList.remove('hidden');
+            resultBox.classList.add('hidden');
+            statusText.innerText = "Reading the text in your photo...";
+
+            try {
+                const ocrResult = await Tesseract.recognize(fileInput.files[0], 'eng');
+                const extractedText = ocrResult.data.text;
+
+                if (!extractedText.trim()) {
+                    throw new Error("We couldn't read any text. Please make sure the photo is clear and bright.");
+                }
+
+                statusText.innerText = "Checking for scams... Please wait.";
+
+                const systemPrompt = "You are a patient, expert cybersecurity analyst protecting elderly users. Analyze this text extracted from a user's screenshot. Determine if it is Official, Suspicious, or a Scam. Respond in exactly this JSON format: {\"verdict\": \"Official | Suspicious | Scam\", \"explanation\": \"Your 2-3 sentence analysis written in clear, simple language suitable for senior citizens.\"}";
+
+                // Direct fetch to Groq from the frontend
+                const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'llama-3.3-70b-versatile',
+                        response_format: { type: "json_object" }, 
+                        messages: [
+                            { role: 'system', content: systemPrompt },
+                            { role: 'user', content: `User Text:\n${extractedText}` }
+                        ]
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('The system is busy. Please try again.');
+                }
+
+                const data = await response.json();
+                const result = JSON.parse(data.choices[0].message.content.trim());
+
+                resultBox.classList.remove('hidden');
+                resultAnalysis.innerText = result.explanation;
+
+                if (result.verdict.toLowerCase().includes('scam')) {
+                    resultVerdict.innerText = "🛑 DANGER: THIS IS A SCAM";
+                    resultBox.className = "mt-8 p-6 rounded-xl border-red-500 bg-red-950/40 text-red-400 shadow-red-900/20";
+                } else if (result.verdict.toLowerCase().includes('suspicious')) {
+                    resultVerdict.innerText = "🟡 WARNING: THIS LOOKS SUSPICIOUS";
+                    resultBox.className = "mt-8 p-6 rounded-xl border-yellow-500 bg-yellow-950/40 text-yellow-400 shadow-yellow-900/20";
+                } else {
+                    resultVerdict.innerText = "🟢 SAFE: THIS LOOKS OFFICIAL";
+                    resultBox.className = "mt-8 p-6 rounded-xl border-green-500 bg-green-950/40 text-green-400 shadow-green-900/20";
+                }
+
+            } catch (err) {
+                alert('Notice: ' + err.message);
+                console.error(err);
+            } finally {
+                statusDiv.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
