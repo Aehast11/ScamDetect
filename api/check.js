@@ -1,0 +1,1 @@
+const apiKey = process.env.GROQ_API_KEY;
